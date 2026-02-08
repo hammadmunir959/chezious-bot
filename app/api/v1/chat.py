@@ -45,6 +45,7 @@ async def chat(
                 async for token in service.handle_chat(
                     chat_request.session_id,
                     chat_request.message,
+                    chat_request.user_id,
                 ):
                     yield {
                         "event": "token",

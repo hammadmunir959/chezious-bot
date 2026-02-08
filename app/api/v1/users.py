@@ -7,21 +7,77 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from app.services.session_service import SessionService
 from app.services.context_service import ContextService
-from app.schemas.user import UserSessionsResponse, UserSessionSummary
+from app.services.user_service import UserService
+from app.schemas.user import (
+    UserSessionsResponse,
+    UserSessionSummary,
+    UserWithSessions,
+    UserCreate,
+)
 from app.schemas.session import SessionResponse
 from app.schemas.chat import MessagesResponse, ChatMessage
+from fastapi import APIRouter, Depends, status, Response, Request
 
 router = APIRouter(prefix="/users")
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete a user and all their sessions."""
+    service = UserService(session)
+    await service.delete_user(user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/", response_model=UserCreate)
+async def create_user(
+    request: UserCreate,
+    session: AsyncSession = Depends(get_session),
+) -> UserCreate:
+    """Create or update a user."""
+    service = UserService(session)
+    user = await service.get_or_create_user(
+        request.user_id, 
+        request.name,
+        request.city,
+    )
+    
+    return UserCreate(
+        user_id=user.user_id,
+        name=user.name,
+        city=user.city,
+    )
+
+
+@router.get("/", response_model=list[UserWithSessions])
+async def get_users_with_sessions(
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+) -> list[UserWithSessions]:
+    """Get all users with their active sessions."""
+    service = UserService(session)
+    return await service.get_users_with_sessions(limit, offset)
 
 
 @router.get("/{user_id}/sessions", response_model=UserSessionsResponse)
 async def get_user_sessions(
     user_id: str,
+    limit: int = 50,
+    offset: int = 0,
+    min_messages: int = 1, # Default to 1 to skip empty sessions
     session: AsyncSession = Depends(get_session),
 ) -> UserSessionsResponse:
     """Get all sessions for a user."""
     service = SessionService(session)
-    sessions = await service.get_user_sessions(user_id)
+    sessions = await service.get_user_sessions(
+        user_id=user_id, 
+        limit=limit, 
+        offset=offset, 
+        min_messages=min_messages
+    )
 
     return UserSessionsResponse(
         user_id=user_id,
@@ -34,57 +90,7 @@ async def get_user_sessions(
             )
             for s in sessions
         ],
+        session_count=len(sessions),
     )
 
 
-@router.get("/{user_id}/sessions/{session_id}", response_model=SessionResponse)
-async def get_user_session(
-    user_id: str,
-    session_id: UUID,
-    session: AsyncSession = Depends(get_session),
-) -> SessionResponse:
-    """Get a specific session for a user."""
-    service = SessionService(session)
-    chat_session = await service.get_user_session(user_id, session_id)
-
-    return SessionResponse(
-        id=chat_session.id,
-        user_id=chat_session.user_id,
-        created_at=chat_session.created_at,
-        status=chat_session.status,
-        message_count=chat_session.message_count,
-    )
-
-
-@router.get(
-    "/{user_id}/sessions/{session_id}/messages",
-    response_model=MessagesResponse,
-)
-async def get_user_session_messages(
-    user_id: str,
-    session_id: UUID,
-    session: AsyncSession = Depends(get_session),
-) -> MessagesResponse:
-    """Get all messages for a user's session."""
-    session_service = SessionService(session)
-    context_service = ContextService(session)
-
-    # Verify session belongs to user
-    chat_session = await session_service.get_user_session(user_id, session_id)
-
-    # Get messages
-    messages = await context_service.get_session_messages(session_id)
-
-    return MessagesResponse(
-        session_id=chat_session.id,
-        user_id=chat_session.user_id,
-        messages=[
-            ChatMessage(
-                id=m.id,
-                role=m.role,
-                content=m.content,
-                created_at=m.created_at,
-            )
-            for m in messages
-        ],
-    )

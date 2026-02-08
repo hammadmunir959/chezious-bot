@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
 from app.db.session import get_session
 from app.schemas.common import HealthResponse, ReadyResponse
@@ -33,7 +34,7 @@ async def readiness_check(
 
     # Check database
     try:
-        await session.execute("SELECT 1")
+        await session.execute(text("SELECT 1"))
     except Exception:
         db_status = "error"
 

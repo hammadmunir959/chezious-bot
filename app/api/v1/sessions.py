@@ -24,7 +24,14 @@ async def create_session(
 ) -> SessionResponse:
     """Create a new chat session."""
     service = SessionService(session)
-    chat_session = await service.create_session(request.user_id)
+    chat_session = await service.create_session(
+        user_id=request.user_id, 
+        persist=False,
+        user_name=request.name,
+        location=request.location,
+    )
+    # Commit to ensure session is visible to other requests
+    await session.commit()
 
     return SessionResponse(
         id=chat_session.id,
@@ -32,6 +39,8 @@ async def create_session(
         created_at=chat_session.created_at,
         status=chat_session.status,
         message_count=chat_session.message_count,
+        user_name=chat_session.user_name,
+        location=chat_session.location,
     )
 
 
@@ -50,6 +59,8 @@ async def get_session_details(
         created_at=chat_session.created_at,
         status=chat_session.status,
         message_count=chat_session.message_count,
+        user_name=chat_session.user_name,
+        location=chat_session.location,
     )
 
 
@@ -80,19 +91,12 @@ async def get_session_messages(
     )
 
 
-@router.delete("/{session_id}", response_model=SessionResponse)
-async def archive_session(
+@router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_session(
     session_id: UUID,
     session: AsyncSession = Depends(get_session),
-) -> SessionResponse:
-    """Archive a session."""
+) -> None:
+    """Delete a session."""
     service = SessionService(session)
-    chat_session = await service.archive_session(session_id)
-
-    return SessionResponse(
-        id=chat_session.id,
-        user_id=chat_session.user_id,
-        created_at=chat_session.created_at,
-        status=chat_session.status,
-        message_count=chat_session.message_count,
-    )
+    await service.delete_session(session_id)
+    return None

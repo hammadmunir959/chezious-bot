@@ -5,10 +5,11 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import ValidationException
+from app.core.exceptions import ValidationException, SessionNotFoundException, UserNotFoundException
 from app.core.logging import get_logger
 from app.services.session_service import SessionService
 from app.services.context_service import ContextService
+from app.services.user_service import UserService
 from app.llm.groq_client import groq_client
 
 logger = get_logger(__name__)
@@ -21,6 +22,7 @@ class ChatService:
         self.session = session
         self.session_service = SessionService(session)
         self.context_service = ContextService(session)
+        self.user_service = UserService(session)
 
     def validate_message(self, content: str) -> str:
         """
@@ -55,6 +57,7 @@ class ChatService:
         self,
         session_id: UUID,
         user_message: str,
+        user_id: str | None = None,
     ) -> AsyncGenerator[str, None]:
         """
         Handle a chat request with streaming response.
@@ -62,46 +65,80 @@ class ChatService:
         Args:
             session_id: The session UUID
             user_message: The user's message
+            user_id: Optional user ID for lazy session creation
 
         Yields:
             Response tokens as they arrive
 
         Raises:
             ValidationException: If message validation fails
-            SessionNotFoundException: If session doesn't exist
+            SessionNotFoundException: If session doesn't exist AND user_id not provided
         """
         # 1. Validate input
         user_message = self.validate_message(user_message)
         logger.info(f"Processing chat for session {session_id}")
 
-        # 2. Verify session exists
-        chat_session = await self.session_service.get_session(session_id)
-        logger.debug(f"Session verified: {chat_session.id}")
+        # 2. Verify or create session
+        try:
+            chat_session = await self.session_service.get_session(session_id)
+            logger.debug(f"Session verified: {chat_session.id}")
+        except SessionNotFoundException:
+            if user_id:
+                logger.info(
+                    f"Session {session_id} not found, creating new session for user {user_id}"
+                )
+                chat_session = await self.session_service.create_session_with_id(
+                    session_id, user_id
+                )
+            else:
+                raise
 
         # 3. Save user message
         await self.context_service.save_message(
             session_id, "user", user_message
         )
         await self.session_service.increment_message_count(session_id)
+        
+        # Get user context from session (preferred) or fetch from user profile
+        user_name = chat_session.user_name
+        location = chat_session.location
+        
+        # Fall back to user profile if session doesn't have context
+        if not user_name or not location:
+            current_user_id = user_id or chat_session.user_id
+            if current_user_id:
+                try:
+                    user = await self.user_service.get_user(current_user_id)
+                    user_name = user_name or user.name
+                    location = location or user.city
+                except UserNotFoundException:
+                    logger.debug(f"User {current_user_id} not found, proceeding without full context")
+                except Exception as e:
+                    logger.error(f"Unexpected error fetching user {current_user_id}: {e}")
+        
+        # 4. Commit the session NOW before streaming
+        await self.session.commit()
 
-        # 4. Get context messages
+        # 5. Get context messages
         context_messages = await self.context_service.get_context_messages(
             session_id
         )
 
-        # 5. Build LLM messages (without current message since it's in context)
+        # 6. Build LLM messages (without current message since it's in context)
         llm_messages = self.context_service.build_messages_for_llm(
             context_messages[:-1],  # Exclude the just-saved message
             user_message,
+            user_name=user_name,
+            location=location,
         )
 
-        # 6. Stream response from Groq
+        # 7. Stream response from Groq
         full_response: list[str] = []
         async for token in groq_client.stream_chat(llm_messages):
             full_response.append(token)
             yield token
 
-        # 7. Save assistant response
+        # 8. Save assistant response (session will be committed by dependency)
         assistant_content = "".join(full_response)
         await self.context_service.save_message(
             session_id, "assistant", assistant_content

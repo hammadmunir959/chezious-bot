@@ -30,6 +30,21 @@ ENV/
 env/
 .venv/
 
+# UI
+# ui/
+
+# Evaluation
+tests/
+
+# Documentation
+docs/
+
+
+#Alembic
+alembic/
+*.ini
+
+
 # Environment variables
 .env
 .env.local

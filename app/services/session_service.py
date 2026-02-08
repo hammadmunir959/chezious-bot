@@ -20,21 +20,83 @@ class SessionService:
         self.session = session
         self.user_service = UserService(session)
 
-    async def create_session(self, user_id: str) -> ChatSession:
+    async def create_session(
+        self, 
+        user_id: str, 
+        persist: bool = True,
+        user_name: str | None = None,
+        location: str | None = None,
+    ) -> ChatSession:
         """
         Create a new chat session for a user.
 
         Args:
             user_id: The user's ID
+            persist: Whether to save to database immediately
+            user_name: Optional user name to store with session
+            location: Optional location context for the session
 
         Returns:
             New ChatSession instance
         """
-        # Ensure user exists
-        await self.user_service.get_or_create_user(user_id)
+        # Ensure user exists (only if persisting)
+        check_user = persist 
+        
+        if check_user:
+            await self.user_service.get_or_create_user(user_id)
 
-        # Create session
-        chat_session = ChatSession(user_id=user_id)
+        # Create session with context
+        chat_session = ChatSession(
+            user_id=user_id,
+            user_name=user_name,
+            location=location,
+        )
+        
+        if persist:
+            self.session.add(chat_session)
+            await self.session.flush()
+            
+            # Increment user's session count
+            await self.user_service.increment_session_count(user_id)
+            logger.info(f"Created session {chat_session.id} for user {user_id}")
+        else:
+            logger.info(f"Generated lazy session {chat_session.id} for user {user_id}")
+            
+        return chat_session
+
+    async def create_session_with_id(
+        self, 
+        session_id: UUID, 
+        user_id: str,
+        user_name: str | None = None,
+        location: str | None = None,
+    ) -> ChatSession:
+        """
+        Create a session with a specific ID (used for lazy creation).
+
+        Args:
+            session_id: The session UUID
+            user_id: The user's ID
+            user_name: Optional user name to store with session
+            location: Optional location context for the session
+
+        Returns:
+            ChatSession instance
+        """
+        # Ensure user exists and get their info
+        user = await self.user_service.get_or_create_user(user_id)
+
+        # Use provided values or fall back to user's stored info
+        session_user_name = user_name or user.name
+        session_location = location or user.city
+
+        # Create session with context
+        chat_session = ChatSession(
+            id=session_id, 
+            user_id=user_id,
+            user_name=session_user_name,
+            location=session_location,
+        )
         self.session.add(chat_session)
         await self.session.flush()
 
@@ -67,21 +129,37 @@ class SessionService:
 
         return chat_session
 
-    async def get_user_sessions(self, user_id: str) -> list[ChatSession]:
+    async def get_user_sessions(
+        self, 
+        user_id: str,
+        limit: int = 50,
+        offset: int = 0,
+        min_messages: int = 0
+    ) -> list[ChatSession]:
         """
         Get all sessions for a user.
 
         Args:
             user_id: The user's ID
+            limit: Maximum number of sessions to return
+            offset: Number of sessions to skip
+            min_messages: Minimum message count to include
 
         Returns:
             List of ChatSession instances
         """
-        result = await self.session.execute(
+        stmt = (
             select(ChatSession)
-            .where(ChatSession.user_id == user_id)
+            .where(
+                ChatSession.user_id == user_id,
+                ChatSession.status == "active",
+                ChatSession.message_count >= min_messages
+            )
             .order_by(ChatSession.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
     async def get_user_session(
@@ -113,22 +191,21 @@ class SessionService:
 
         return chat_session
 
-    async def archive_session(self, session_id: UUID) -> ChatSession:
+    async def delete_session(self, session_id: UUID) -> None:
         """
-        Archive a session.
+        Delete a session including its messages (via cascade).
 
         Args:
             session_id: The session UUID
 
-        Returns:
-            Updated ChatSession instance
+        Raises:
+            SessionNotFoundException: If session doesn't exist
         """
         chat_session = await self.get_session(session_id)
-        chat_session.archive()
+        await self.session.delete(chat_session)
         await self.session.flush()
 
-        logger.info(f"Archived session {session_id}")
-        return chat_session
+        logger.info(f"Deleted session {session_id}")
 
     async def increment_message_count(self, session_id: UUID) -> None:
         """Increment the session's message count."""

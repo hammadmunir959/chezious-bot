@@ -53,6 +53,8 @@ class ContextService:
         self,
         context_messages: list[Message],
         current_message: str,
+        user_name: str | None = None,
+        location: str | None = None,
     ) -> list[dict[str, str]]:
         """
         Build the messages list for LLM API call.
@@ -60,12 +62,14 @@ class ContextService:
         Args:
             context_messages: Previous messages for context
             current_message: The current user message
+            user_name: The user's name for personalization
+            location: The user's location for branch suggestions
 
         Returns:
             List of message dicts for Groq API
         """
         llm_messages: list[dict[str, str]] = [
-            {"role": "system", "content": get_system_prompt()}
+            {"role": "system", "content": get_system_prompt(user_name, location)}
         ]
 
         # Add context messages

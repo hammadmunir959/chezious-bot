@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Groq API Configuration
     groq_api_key: str
     groq_model: str = "llama-3.1-8b-instant"
-    groq_max_tokens: int = 512
+    groq_max_tokens: int = 2048
     groq_temperature: float = 0.6
 
     # Database

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CheziousBot - AI Pizza Assistant</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- User Name Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h2>Welcome to CheziousBot! 🍕</h2>
+            <p>What should we call you?</p>
+            <input type="text" id="userName" placeholder="Enter your name..." autocomplete="name">
+            <label for="userCity" class="city-label">Your city (for nearby branch suggestions)</label>
+            <select id="userCity" class="city-select">
+                <option value="">Select your city...</option>
+                <option value="Lahore">Lahore</option>
+                <option value="Islamabad">Islamabad</option>
+                <option value="Rawalpindi">Rawalpindi</option>
+                <option value="Peshawar">Peshawar</option>
+                <option value="Kasur">Kasur</option>
+                <option value="Mardan">Mardan</option>
+                <option value="Sahiwal">Sahiwal</option>
+                <option value="Mian Channu">Mian Channu</option>
+                <option value="Pattoki">Pattoki</option>
+                <option value="Okara">Okara</option>
+            </select>
+            <button id="saveUserName" class="btn-primary">Let's Go!</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-btn" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <label>Your Name</label>
+                    <input type="text" id="settingsUserName" placeholder="Your name">
+                </div>
+                <div class="setting-item">
+                    <label>Your City</label>
+                    <select id="settingsUserCity" class="city-select">
+                        <option value="">Select your city...</option>
+                        <option value="Lahore">Lahore</option>
+                        <option value="Islamabad">Islamabad</option>
+                        <option value="Rawalpindi">Rawalpindi</option>
+                        <option value="Peshawar">Peshawar</option>
+                        <option value="Kasur">Kasur</option>
+                        <option value="Mardan">Mardan</option>
+                        <option value="Sahiwal">Sahiwal</option>
+                        <option value="Mian Channu">Mian Channu</option>
+                        <option value="Pattoki">Pattoki</option>
+                        <option value="Okara">Okara</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <button onclick="updateUserProfile()" class="btn-secondary">Update Profile</button>
+                </div>
+                <div class="setting-item">
+                    <label>Danger Zone</label>
+                    <button onclick="clearAllHistory()" class="btn-danger">Clear All History</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-info">
+                    <div class="avatar">👤</div>
+                    <div class="user-details">
+                        <div class="user-name" id="sidebarUserName">Guest</div>
+                        <div class="user-status">
+                            <span class="status-dot" id="statusDot"></span>
+                            <span id="statusText">Connected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="new-chat-btn" onclick="createNewChat()">
+                <span>+</span> New Chat
+            </button>
+
+            <div class="sessions-container">
+                <div id="sessionsList" class="sessions-list">
+                    <!-- Sessions will be loaded here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <!-- Header -->
+            <header class="chat-header">
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <span class="hamburger">☰</span>
+                </button>
+                <div class="brand">
+                    <span class="brand-emoji">🍕</span>
+                    <span class="brand-name">CheziousBot</span>
+                </div>
+                <div class="header-actions">
+                    <div class="session-info">
+                        <span class="session-label">Session</span>
+                        <span class="session-id" id="currentSessionId">---</span>
+                    </div>
+                    <button class="icon-btn" onclick="openSettings()" title="Settings">
+                        ⚙️
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div class="messages-area" id="messagesArea">
+                <!-- Welcome message will be added by JS -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="messageInput" class="message-input"
+                        placeholder="Ask about our menu, hours, or locations..." rows="1"></textarea>
+                    <button id="sendBtn" class="send-btn" onclick="sendMessage()">
+                        🚀
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/markdown.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

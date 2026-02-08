@@ -23,8 +23,8 @@ async_session = sessionmaker(
 
 async def init_db() -> None:
     """Initialize database and create tables."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    # Alembic handles migrations now
+    pass
 
 
 async def close_db() -> None:

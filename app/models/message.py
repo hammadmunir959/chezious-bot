@@ -2,8 +2,11 @@
 
 from datetime import datetime
 from uuid import UUID, uuid4
-from typing import Literal
-from sqlmodel import SQLModel, Field
+from typing import Literal, TYPE_CHECKING
+from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from app.models.session import ChatSession
 
 from app.utils.time import utc_now
 
@@ -21,6 +24,9 @@ class Message(SQLModel, table=True):
     role: str = Field(max_length=10)  # user | assistant
     content: str = Field()
     created_at: datetime = Field(default_factory=utc_now)
+    
+    # Relationships
+    session: "ChatSession" = Relationship(back_populates="messages")
 
     @classmethod
     def create_user_message(cls, session_id: UUID, content: str) -> "Message":

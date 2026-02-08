@@ -11,6 +11,7 @@ class ChatRequest(BaseModel):
     """Request to send a chat message."""
 
     session_id: UUID
+    user_id: str | None = None
     message: str = Field(
         ...,
         min_length=1,

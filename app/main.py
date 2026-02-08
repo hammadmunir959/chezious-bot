@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -72,7 +73,7 @@ async def chatbot_exception_handler(
         content=exc.to_dict(),
     )
 
-
+ 
 @app.exception_handler(Exception)
 async def general_exception_handler(
     request: Request, exc: Exception
@@ -90,16 +91,8 @@ async def general_exception_handler(
     )
 
 
-# Root endpoint
-@app.get("/")
-async def root():
-    """Root endpoint with API info."""
-    return {
-        "name": settings.app_name,
-        "version": settings.app_version,
-        "docs": "/docs",
-        "health": "/api/v1/health",
-    }
+# Mount static files (UI) - must be last to not override API routes
+app.mount("/", StaticFiles(directory="ui", html=True), name="ui")
 
 
 if __name__ == "__main__":
