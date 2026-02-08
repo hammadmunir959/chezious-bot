@@ -15,7 +15,6 @@ logger = get_logger(__name__)
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -115,13 +114,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
     )
 
 
-# Mount static files (UI)
-try:
-    app.mount("/", StaticFiles(directory="ui", html=True), name="ui")
-except Exception as e:
-    logger.error(f"Failed to mount static files: {e}")
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=settings.debug)
+
