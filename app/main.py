@@ -114,6 +114,17 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
     )
 
 
+@app.get("/")
+async def root():
+    """Root endpoint for API status."""
+    return {
+        "app": settings.app_name,
+        "version": settings.app_version,
+        "status": "online",
+        "docs_url": "/docs"
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=settings.debug)
