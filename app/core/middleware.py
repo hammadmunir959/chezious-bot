@@ -1,8 +1,8 @@
-"""Request logging middleware."""
+"""Resilience and logging middleware."""
 import time
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 
 from app.core.logging import get_logger
 
@@ -27,10 +27,39 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             )
             return response
             
-        except Exception:
+        except Exception as e:
             # Calculate duration even for failed requests
             duration = (time.perf_counter() - start_time) * 1000
             logger.error(
-                f"{request.method} {request.url.path} -> FAILED ({duration:.0f}ms)"
+                f"{request.method} {request.url.path} -> CRASHED ({duration:.0f}ms): {e}",
+                exc_info=True
             )
+            # Re-raise to let the general exception handler handle it, 
+            # or it will be caught by ResilienceMiddleware if that's next in the stack.
             raise
+
+
+class ResilienceMiddleware(BaseHTTPMiddleware):
+    """
+    Ultimate safety net middleware. 
+    Catches any exception that escaped earlier handlers and returns a clean 500 JSON.
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        try:
+            return await call_next(request)
+        except Exception as e:
+            logger.error(
+                f"Unhandled Exception caught by ResilienceMiddleware: {str(e)}", 
+                exc_info=True
+            )
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": {
+                        "code": "INTERNAL_SERVER_ERROR",
+                        "message": "A critical system error occurred. Our team has been notified.",
+                        "details": {"type": type(e).__name__} if request.app.debug else {}
+                    }
+                }
+            )

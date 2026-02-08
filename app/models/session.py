@@ -2,7 +2,8 @@
 
 from datetime import datetime
 from uuid import UUID, uuid4
-from typing import Literal, TYPE_CHECKING
+from enum import Enum
+from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
@@ -11,25 +12,75 @@ if TYPE_CHECKING:
 
 from app.utils.time import utc_now
 
+# Use Enum for database compatibility and strict validation
+class SessionStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    DELETED = "deleted"
+
 
 class ChatSession(SQLModel, table=True):
-    """Chat session model."""
+    """
+    Represents an individual chat session for a user.
+    """
 
     __tablename__ = "chat_sessions"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: str = Field(foreign_key="users.user_id", index=True)
-    created_at: datetime = Field(default_factory=utc_now)
-    status: str = Field(default="active")  # "active" | "archived"
-    message_count: int = Field(default=0)
+    id: UUID = Field(
+        default_factory=uuid4, 
+        primary_key=True,
+        description="Unique identifier for the session"
+    )
     
-    # Context fields (captured at session creation)
-    user_name: str | None = Field(default=None, max_length=100)
-    location: str | None = Field(default=None, max_length=100)
+    user_id: str = Field(
+        foreign_key="users.user_id", 
+        index=True,
+        max_length=50,
+        description="The ID of the user who owns this session"
+    )
     
-    # Session lifecycle tracking
-    last_activity_at: datetime = Field(default_factory=utc_now)
-    expires_at: datetime | None = Field(default=None)
+    status: SessionStatus = Field(
+        default=SessionStatus.ACTIVE,
+        index=True,
+        description="Current state of the session"
+    )
+    
+    message_count: int = Field(
+        default=0,
+        description="Total number of messages in this session"
+    )
+    
+    # Context fields captured at creation
+    user_name: str | None = Field(
+        default=None, 
+        max_length=100,
+        description="The user's display name at session start"
+    )
+    
+    location: str | None = Field(
+        default=None, 
+        max_length=100,
+        description="The user's city/location at session start"
+    )
+    
+    # Lifecycle timestamps
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        index=True,
+        description="Timestamp when the session was created"
+    )
+    
+    last_activity_at: datetime = Field(
+        default_factory=utc_now,
+        index=True,
+        description="Timestamp of the most recent message or interaction"
+    )
+    
+    expires_at: datetime | None = Field(
+        default=None,
+        index=True,
+        description="Optional expiration date for the session"
+    )
     
     # Relationships
     user: "User" = Relationship(back_populates="sessions")
@@ -39,25 +90,26 @@ class ChatSession(SQLModel, table=True):
     )
 
     def increment_message_count(self) -> None:
-        """Increment the message count."""
+        """Update message counter and refresh activity timestamp."""
         self.message_count += 1
+        self.update_activity()
 
     def update_activity(self) -> None:
-        """Update last activity timestamp."""
+        """Refresh the last activity timestamp to current UTC time."""
         self.last_activity_at = utc_now()
 
     def archive(self) -> None:
-        """Archive the session."""
-        self.status = "archived"
+        """Set session status to archived."""
+        self.status = SessionStatus.ARCHIVED
 
     @property
     def is_active(self) -> bool:
-        """Check if session is active."""
-        return self.status == "active"
+        """Returns True if the session is in 'active' state and not expired."""
+        return self.status == SessionStatus.ACTIVE and not self.is_expired
 
     @property
     def is_expired(self) -> bool:
-        """Check if session has expired."""
+        """Returns True if the current time is past the expiration date (if set)."""
         if self.expires_at is None:
             return False
         return utc_now() > self.expires_at
