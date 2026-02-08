@@ -41,8 +41,8 @@ docs/
 
 
 #Alembic
-alembic/
-*.ini
+# alembic/
+# *.ini
 
 
 # Environment variables
