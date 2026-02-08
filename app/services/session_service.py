@@ -16,9 +16,9 @@ logger = get_logger(__name__)
 class SessionService:
     """Service for session-related operations."""
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.user_service = UserService(session)
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.user_service = UserService(db)
 
     async def create_session(
         self, 
@@ -53,8 +53,8 @@ class SessionService:
         )
         
         if persist:
-            self.session.add(chat_session)
-            await self.session.flush()
+            self.db.add(chat_session)
+            await self.db.flush()
             
             # Increment user's session count
             await self.user_service.increment_session_count(user_id)
@@ -97,8 +97,8 @@ class SessionService:
             user_name=session_user_name,
             location=session_location,
         )
-        self.session.add(chat_session)
-        await self.session.flush()
+        self.db.add(chat_session)
+        await self.db.flush()
 
         # Increment user's session count
         await self.user_service.increment_session_count(user_id)
@@ -119,7 +119,7 @@ class SessionService:
         Raises:
             SessionNotFoundException: If session doesn't exist
         """
-        result = await self.session.execute(
+        result = await self.db.execute(
             select(ChatSession).where(ChatSession.id == session_id)
         )
         chat_session = result.scalar_one_or_none()
@@ -159,7 +159,7 @@ class SessionService:
             .limit(limit)
             .offset(offset)
         )
-        result = await self.session.execute(stmt)
+        result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
     async def get_user_session(
@@ -178,7 +178,7 @@ class SessionService:
         Raises:
             SessionNotFoundException: If session doesn't exist or doesn't belong to user
         """
-        result = await self.session.execute(
+        result = await self.db.execute(
             select(ChatSession).where(
                 ChatSession.id == session_id,
                 ChatSession.user_id == user_id,
@@ -202,8 +202,8 @@ class SessionService:
             SessionNotFoundException: If session doesn't exist
         """
         chat_session = await self.get_session(session_id)
-        await self.session.delete(chat_session)
-        await self.session.flush()
+        await self.db.delete(chat_session)
+        await self.db.flush()
 
         logger.info(f"Deleted session {session_id}")
 
@@ -211,4 +211,4 @@ class SessionService:
         """Increment the session's message count."""
         chat_session = await self.get_session(session_id)
         chat_session.increment_message_count()
-        await self.session.flush()
+        await self.db.flush()

@@ -11,9 +11,6 @@ if TYPE_CHECKING:
 from app.utils.time import utc_now
 
 
-MessageRole = Literal["user", "assistant"]
-
-
 class Message(SQLModel, table=True):
     """Chat message model."""
 
@@ -21,7 +18,7 @@ class Message(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     session_id: UUID = Field(foreign_key="chat_sessions.id", index=True)
-    role: str = Field(max_length=10)  # user | assistant
+    role: str = Field(max_length=10)  # "user" | "assistant"
     content: str = Field()
     created_at: datetime = Field(default_factory=utc_now)
     

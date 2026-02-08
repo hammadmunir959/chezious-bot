@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # CORS
+    allowed_origins: list[str] = ["http://localhost:8000", "http://127.0.0.1:8000"]
+
+    # API Security
+    api_key_enabled: bool = True
+    api_key: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

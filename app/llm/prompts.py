@@ -208,6 +208,15 @@ BRANCH_LOCATIONS = """## BRANCH LOCATIONS
 # PROMPT COMPOSITION
 # ============================================================================
 
+# Pre-compose base prompt at module load (static content, ~8KB)
+_BASE_PROMPT = "\n\n".join([
+    CORE_IDENTITY,
+    BUSINESS_INFO,
+    MENU,
+    BRANCH_LOCATIONS,
+])
+
+
 def get_system_prompt(user_name: str | None = None, location: str | None = None) -> str:
     """
     Compose and return the full system prompt.
@@ -219,12 +228,7 @@ def get_system_prompt(user_name: str | None = None, location: str | None = None)
     Returns:
         Complete system prompt string.
     """
-    prompt = "\n\n".join([
-        CORE_IDENTITY,
-        BUSINESS_INFO,
-        MENU,
-        BRANCH_LOCATIONS,
-    ])
+    prompt = _BASE_PROMPT
     
     # Add user context if available
     user_context_parts = []

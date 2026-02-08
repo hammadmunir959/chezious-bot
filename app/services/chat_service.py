@@ -10,7 +10,7 @@ from app.core.logging import get_logger
 from app.services.session_service import SessionService
 from app.services.context_service import ContextService
 from app.services.user_service import UserService
-from app.llm.groq_client import groq_client
+from app.llm.groq_client import get_groq_client
 
 logger = get_logger(__name__)
 
@@ -18,11 +18,11 @@ logger = get_logger(__name__)
 class ChatService:
     """Service for chat orchestration."""
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.session_service = SessionService(session)
-        self.context_service = ContextService(session)
-        self.user_service = UserService(session)
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.session_service = SessionService(db)
+        self.context_service = ContextService(db)
+        self.user_service = UserService(db)
 
     def validate_message(self, content: str) -> str:
         """
@@ -117,7 +117,7 @@ class ChatService:
                     logger.error(f"Unexpected error fetching user {current_user_id}: {e}")
         
         # 4. Commit the session NOW before streaming
-        await self.session.commit()
+        await self.db.commit()
 
         # 5. Get context messages
         context_messages = await self.context_service.get_context_messages(
@@ -134,7 +134,7 @@ class ChatService:
 
         # 7. Stream response from Groq
         full_response: list[str] = []
-        async for token in groq_client.stream_chat(llm_messages):
+        async for token in get_groq_client().stream_chat(llm_messages):
             full_response.append(token)
             yield token
 

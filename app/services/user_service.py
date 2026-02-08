@@ -15,8 +15,8 @@ logger = get_logger(__name__)
 class UserService:
     """Service for user-related operations."""
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(self, db: AsyncSession):
+        self.db = db
 
     async def get_or_create_user(
         self, user_id: str, name: str | None = None, city: str | None = None
@@ -33,7 +33,7 @@ class UserService:
             User instance
         """
         # Try to get existing user
-        result = await self.session.execute(
+        result = await self.db.execute(
             select(User).where(User.user_id == user_id)
         )
         user = result.scalar_one_or_none()
@@ -47,13 +47,13 @@ class UserService:
             if city and user.city != city:
                 user.city = city
             if name or city:
-                await self.session.flush()
+                await self.db.flush()
             return user
 
         # Create new user
         user = User(user_id=user_id, name=name, city=city)
-        self.session.add(user)
-        await self.session.flush()
+        self.db.add(user)
+        await self.db.flush()
 
         logger.info(f"Created new user: {user_id}")
         return user
@@ -71,7 +71,7 @@ class UserService:
         Raises:
             UserNotFoundException: If user doesn't exist
         """
-        result = await self.session.execute(
+        result = await self.db.execute(
             select(User).where(User.user_id == user_id)
         )
         user = result.scalar_one_or_none()
@@ -85,7 +85,7 @@ class UserService:
         """Increment the user's session count."""
         user = await self.get_user(user_id)
         user.increment_session_count()
-        await self.session.flush()
+        await self.db.flush()
 
     async def get_users_with_sessions(
         self, limit: int = 50, offset: int = 0
@@ -127,7 +127,7 @@ class UserService:
             .offset(offset)
         )
         
-        result = await self.session.execute(stmt)
+        result = await self.db.execute(stmt)
         users = result.scalars().all()
 
         users_with_sessions = []
@@ -178,7 +178,7 @@ class UserService:
         user = await self.get_user(user_id)
 
         # Delete user (cascade will handle sessions and messages)
-        await self.session.delete(user)
-        await self.session.flush()
+        await self.db.delete(user)
+        await self.db.flush()
         
         logger.info(f"Deleted user {user_id}")

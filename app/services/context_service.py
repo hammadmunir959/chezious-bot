@@ -18,10 +18,10 @@ class ContextService:
 
     def __init__(
         self,
-        session: AsyncSession,
+        db: AsyncSession,
         max_messages: int | None = None,
     ):
-        self.session = session
+        self.db = db
         self.max_messages = max_messages or settings.context_window_size
 
     async def get_context_messages(self, session_id: UUID) -> list[Message]:
@@ -38,7 +38,7 @@ class ContextService:
             DatabaseException: If database query fails
         """
         try:
-            result = await self.session.execute(
+            result = await self.db.execute(
                 select(Message)
                 .where(Message.session_id == session_id)
                 .order_by(Message.created_at.desc())
@@ -124,8 +124,8 @@ class ContextService:
             else:
                 message = Message.create_assistant_message(session_id, content)
 
-            self.session.add(message)
-            await self.session.flush()
+            self.db.add(message)
+            await self.db.flush()
 
             logger.debug(f"Saved {role} message for session {session_id}")
             return message
@@ -143,7 +143,7 @@ class ContextService:
         Returns:
             List of Message instances (chronological order)
         """
-        result = await self.session.execute(
+        result = await self.db.execute(
             select(Message)
             .where(Message.session_id == session_id)
             .order_by(Message.created_at.asc())

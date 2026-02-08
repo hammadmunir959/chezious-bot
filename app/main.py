@@ -48,14 +48,19 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+from app.core.middleware import RequestLoggingMiddleware
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add request logging middleware
+app.add_middleware(RequestLoggingMiddleware)
 
 # Include API router
 app.include_router(v1_router)

@@ -99,6 +99,22 @@ class GroqClient:
             tokens.append(token)
         return "".join(tokens)
 
+# Lazy singleton holder
+_groq_client: GroqClient | None = None
 
-# Singleton instance
-groq_client = GroqClient()
+
+def get_groq_client() -> GroqClient:
+    """
+    Get or create the Groq client instance.
+    
+    Uses lazy initialization to avoid import-time failures
+    and improve testability.
+    """
+    global _groq_client
+    if _groq_client is None:
+        _groq_client = GroqClient()
+    return _groq_client
+
+
+# For backwards compatibility - use as property access
+groq_client = get_groq_client

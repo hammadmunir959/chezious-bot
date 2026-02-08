@@ -1,12 +1,10 @@
 """User-related endpoints"""
 
-from uuid import UUID
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.services.session_service import SessionService
-from app.services.context_service import ContextService
 from app.services.user_service import UserService
 from app.schemas.user import (
     UserSessionsResponse,
@@ -14,9 +12,6 @@ from app.schemas.user import (
     UserWithSessions,
     UserCreate,
 )
-from app.schemas.session import SessionResponse
-from app.schemas.chat import MessagesResponse, ChatMessage
-from fastapi import APIRouter, Depends, status, Response, Request
 
 router = APIRouter(prefix="/users")
 
@@ -24,7 +19,7 @@ router = APIRouter(prefix="/users")
 async def delete_user(
     user_id: str,
     session: AsyncSession = Depends(get_session),
-) -> None:
+) -> Response:
     """Delete a user and all their sessions."""
     service = UserService(session)
     await service.delete_user(user_id)

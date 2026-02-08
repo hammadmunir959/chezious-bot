@@ -35,6 +35,13 @@ COPY ui/ ./ui/
 # Create directory for SQLite database
 RUN mkdir -p /app/data
 
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
 # Expose the application port
 EXPOSE 8000
 

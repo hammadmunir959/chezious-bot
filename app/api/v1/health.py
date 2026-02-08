@@ -40,8 +40,8 @@ async def readiness_check(
 
     # Check Groq API (lightweight check - just verify client is configured)
     try:
-        from app.llm.groq_client import groq_client
-        if not groq_client.client:
+        from app.llm.groq_client import get_groq_client
+        if not get_groq_client().client:
             groq_status = "error"
     except Exception:
         groq_status = "error"
