@@ -239,16 +239,9 @@ chezious-bot/
 │   ├── services/                 # Business logic layer
 │   ├── utils/                    # Utility functions
 │   └── main.py                   # FastAPI application entry
-├── ui/                           # Frontend web interface
-│   ├── css/                      # Stylesheets
-│   ├── js/                       # JavaScript modules
-│   └── index.html                # Main HTML file
-├── docs/                         # Project documentation
-├── scripts/                      # CLI tools & utilities
-├── alembic/                      # Database migrations
+├── scripts/                      # CLI tool
 ├── requirements.txt
-├── Dockerfile
-└── docker-compose.yml
+
 ```
 
 ---
@@ -269,31 +262,6 @@ chezious-bot/
 
 ---
 
-## 📚 Documentation
-
-Detailed docs in the `docs/` directory:
-
-| Document | Description |
-|----------|-------------|
-| `prd.md` | Product Requirements |
-| `specs.md` | Technical Specifications |
-| `features.md` | Complete Feature List |
-| `file_structure.md` | Codebase Architecture |
-| `context_management.md` | Context Window Strategy |
-| `implementation_plan.md` | Development Phases |
-
----
-
-## 🔮 Roadmap
-
-- [ ] 📝 Context summarization for long conversations
-- [ ] 🐘 PostgreSQL for production scale
-- [ ] ⚡ Redis caching for repeated queries
-- [ ] 📊 Admin dashboard for analytics
-- [ ] 🔀 Multi-model routing (fallback LLMs)
-- [ ] 🌐 Multilingual support (Urdu/English)
-
----
 
 ## 📄 License
 
