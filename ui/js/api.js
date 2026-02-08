@@ -4,8 +4,22 @@
  */
 
 class CheziousBotAPI {
-    constructor(baseURL = 'http://localhost:8000/api/v1') {
+    constructor(baseURL = 'http://localhost:8000/api/v1', apiKey = '') {
         this.baseURL = baseURL;
+        this.apiKey = apiKey;
+    }
+
+    /**
+     * Get headers for requests
+     */
+    getHeaders() {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        if (this.apiKey) {
+            headers['X-API-Key'] = this.apiKey;
+        }
+        return headers;
     }
 
     /**
@@ -45,9 +59,7 @@ class CheziousBotAPI {
 
             const response = await fetch(`${this.baseURL}/sessions`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getHeaders(),
                 body: JSON.stringify(body),
             });
 
@@ -67,7 +79,9 @@ class CheziousBotAPI {
      */
     async getSession(sessionId) {
         try {
-            const response = await fetch(`${this.baseURL}/sessions/${sessionId}`);
+            const response = await fetch(`${this.baseURL}/sessions/${sessionId}`, {
+                headers: this.getHeaders()
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -85,7 +99,9 @@ class CheziousBotAPI {
      */
     async getSessionMessages(sessionId) {
         try {
-            const response = await fetch(`${this.baseURL}/sessions/${sessionId}/messages`);
+            const response = await fetch(`${this.baseURL}/sessions/${sessionId}/messages`, {
+                headers: this.getHeaders()
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -105,6 +121,7 @@ class CheziousBotAPI {
         try {
             const response = await fetch(`${this.baseURL}/sessions/${sessionId}`, {
                 method: 'DELETE',
+                headers: this.getHeaders()
             });
 
             if (!response.ok) {
@@ -147,9 +164,7 @@ class CheziousBotAPI {
 
             const response = await fetch(`${this.baseURL}/users/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getHeaders(),
                 body: JSON.stringify(body),
             });
 
@@ -171,6 +186,7 @@ class CheziousBotAPI {
         try {
             const response = await fetch(`${this.baseURL}/users/${userId}`, {
                 method: 'DELETE',
+                headers: this.getHeaders()
             });
 
             if (!response.ok) {
@@ -192,9 +208,7 @@ class CheziousBotAPI {
         try {
             const response = await fetch(`${this.baseURL}/chat`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getHeaders(),
                 body: JSON.stringify({
                     session_id: sessionId,
                     message: message,
@@ -291,4 +305,7 @@ class CheziousBotAPI {
 }
 
 // Create global API instance
-const api = new CheziousBotAPI();
+// NOTE: in a real production app, the API key should not be hardcoded in client-side code
+// It should be injected via environment variables during build or handled via a backend proxy
+const API_KEY = 'sk_7d2f8a1c9e4b6d0f5a3c2e1b8d7f9a0c';
+const api = new CheziousBotAPI('http://localhost:8000/api/v1', API_KEY);
