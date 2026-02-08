@@ -213,7 +213,29 @@ class CheziousBotAPI {
             while (true) {
                 const { done, value } = await reader.read();
 
-                if (done) break;
+                if (done) {
+                    // Process any remaining data in buffer before exiting
+                    if (buffer.trim()) {
+                        const remainingLines = buffer.split('\n');
+                        for (const line of remainingLines) {
+                            if (!line.trim()) continue;
+                            if (line.startsWith('data:')) {
+                                const data = line.substring(5).trim();
+                                if (data) {
+                                    try {
+                                        const parsed = JSON.parse(data);
+                                        if (parsed.token) {
+                                            yield parsed.token;
+                                        }
+                                    } catch (e) {
+                                        // Ignore parse errors for remaining buffer
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
 
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');

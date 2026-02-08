@@ -1,6 +1,7 @@
 """Application configuration using Pydantic Settings"""
 
 from functools import lru_cache
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +24,16 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.1-8b-instant"
     groq_max_tokens: int = 2048
     groq_temperature: float = 0.6
+
+    @field_validator("groq_api_key")
+    @classmethod
+    def validate_groq_api_key(cls, v: str) -> str:
+        """Validate that GROQ_API_KEY is configured properly."""
+        if not v or v.strip() == "" or v.startswith("your_"):
+            raise ValueError(
+                "GROQ_API_KEY is not configured. Please set it in .env file"
+            )
+        return v
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./cheziousbot.db"

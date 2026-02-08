@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.models.message import Message
 from app.core.config import settings
+from app.core.exceptions import DatabaseException
 from app.core.logging import get_logger
 from app.llm.prompts import get_system_prompt
 
@@ -32,22 +33,29 @@ class ContextService:
 
         Returns:
             List of Message instances (chronological order)
+
+        Raises:
+            DatabaseException: If database query fails
         """
-        result = await self.session.execute(
-            select(Message)
-            .where(Message.session_id == session_id)
-            .order_by(Message.created_at.desc())
-            .limit(self.max_messages)
-        )
-        messages = list(result.scalars().all())
+        try:
+            result = await self.session.execute(
+                select(Message)
+                .where(Message.session_id == session_id)
+                .order_by(Message.created_at.desc())
+                .limit(self.max_messages)
+            )
+            messages = list(result.scalars().all())
 
-        # Reverse to chronological order
-        messages.reverse()
+            # Reverse to chronological order
+            messages.reverse()
 
-        logger.debug(
-            f"Retrieved {len(messages)} context messages for session {session_id}"
-        )
-        return messages
+            logger.debug(
+                f"Retrieved {len(messages)} context messages for session {session_id}"
+            )
+            return messages
+        except Exception as e:
+            logger.error(f"Failed to get context messages: {e}")
+            raise DatabaseException(f"Failed to retrieve messages: {e}")
 
     def build_messages_for_llm(
         self,
@@ -106,17 +114,24 @@ class ContextService:
 
         Returns:
             Created Message instance
+
+        Raises:
+            DatabaseException: If database operation fails
         """
-        if role == "user":
-            message = Message.create_user_message(session_id, content)
-        else:
-            message = Message.create_assistant_message(session_id, content)
+        try:
+            if role == "user":
+                message = Message.create_user_message(session_id, content)
+            else:
+                message = Message.create_assistant_message(session_id, content)
 
-        self.session.add(message)
-        await self.session.flush()
+            self.session.add(message)
+            await self.session.flush()
 
-        logger.debug(f"Saved {role} message for session {session_id}")
-        return message
+            logger.debug(f"Saved {role} message for session {session_id}")
+            return message
+        except Exception as e:
+            logger.error(f"Failed to save message: {e}")
+            raise DatabaseException(f"Failed to save message: {e}")
 
     async def get_session_messages(self, session_id: UUID) -> list[Message]:
         """

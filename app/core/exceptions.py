@@ -80,3 +80,21 @@ class RateLimitException(ChatBotException):
             code="RATE_LIMIT_EXCEEDED",
             details={"user_id": user_id} if user_id else {},
         )
+
+
+class ConfigurationException(ChatBotException):
+    """Raised when configuration is invalid."""
+
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
+        super().__init__(message, code="CONFIGURATION_ERROR", details=details)
+
+
+class ServiceUnavailableException(ChatBotException):
+    """Raised when an external service is unavailable."""
+
+    def __init__(self, service: str, details: dict[str, Any] | None = None):
+        super().__init__(
+            message=f"Service '{service}' is currently unavailable",
+            code="SERVICE_UNAVAILABLE",
+            details={"service": service, **(details or {})},
+        )

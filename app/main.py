@@ -1,7 +1,7 @@
 """CheziousBot - FastAPI Application Entry Point"""
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -67,13 +67,41 @@ async def chatbot_exception_handler(
     request: Request, exc: ChatBotException
 ) -> JSONResponse:
     """Handle ChatBotException and return structured error response."""
+    # Map error codes to appropriate HTTP status codes
+    status_map = {
+        "SESSION_NOT_FOUND": 404,
+        "USER_NOT_FOUND": 404,
+        "VALIDATION_ERROR": 400,
+        "RATE_LIMIT_EXCEEDED": 429,
+        "DATABASE_ERROR": 503,
+        "GROQ_API_ERROR": 503,
+        "SERVICE_UNAVAILABLE": 503,
+        "CONFIGURATION_ERROR": 500,
+    }
+    status_code = status_map.get(exc.code, 400)
     logger.warning(f"ChatBotException: {exc.code} - {exc.message}")
     return JSONResponse(
-        status_code=400,
+        status_code=status_code,
         content=exc.to_dict(),
     )
 
  
+@app.exception_handler(HTTPException)
+async def http_exception_handler(
+    request: Request, exc: HTTPException
+) -> JSONResponse:
+    """Handle FastAPI HTTPException with consistent format."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": "HTTP_ERROR",
+                "message": exc.detail,
+            }
+        },
+    )
+
+
 @app.exception_handler(Exception)
 async def general_exception_handler(
     request: Request, exc: Exception
